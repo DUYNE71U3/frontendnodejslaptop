@@ -16,4 +16,8 @@ apiClient.interceptors.request.use((config) => {
     return config;
 });
 
+// If you need to add specific methods for wishlist operations,
+// you can add them here if you're extending the apiClient.
+// If you're using Axios instance directly, no changes are needed.
+
 export default apiClient;

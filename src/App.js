@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -12,9 +12,15 @@ import UserOrdersPage from './pages/UserOrdersPage';
 import DepositPage from './pages/DepositPage';
 import PaymentCallbackPage from './pages/PaymentCallbackPage';
 import DeliveryDashboard from './pages/DeliveryDashboard';
+import CustomerServiceDashboard from './pages/CustomerServiceDashboard';
+import NotFoundPage from './pages/NotFoundPage';
+import ChatWidget from './components/Chat/ChatWidget';
+import WishlistPage from './pages/WishlistPage';
 import './App.css';
 
 const App = () => {
+    const [showChat, setShowChat] = useState(true);
+
     useEffect(() => {
         // Initialize Bootstrap JS components
         if (typeof window !== 'undefined' && typeof document !== 'undefined') {
@@ -22,6 +28,10 @@ const App = () => {
             import('bootstrap/dist/js/bootstrap.bundle.min.js')
                 .catch(err => console.error('Failed to load Bootstrap JS', err));
         }
+
+        // Check user role - don't show chat for admin, customer service, or delivery personnel
+        const role = localStorage.getItem('role');
+        setShowChat(!role || role === 'user' || !['admin', 'customer_service', 'delivery'].includes(role));
     }, []);
 
     return (
@@ -40,8 +50,12 @@ const App = () => {
                         <Route path="/deposit" element={<DepositPage />} />
                         <Route path="/payment-callback" element={<PaymentCallbackPage />} />
                         <Route path="/delivery" element={<DeliveryDashboard />} />
+                        <Route path="/customer-service" element={<CustomerServiceDashboard />} />
+                        <Route path="/wishlist" element={<WishlistPage />} />
+                        <Route path="*" element={<NotFoundPage />} />
                     </Routes>
                 </div>
+                {showChat && <ChatWidget />}
                 <Footer />
             </div>
         </Router>

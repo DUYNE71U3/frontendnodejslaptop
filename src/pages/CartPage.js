@@ -28,12 +28,16 @@ const CartPage = () => {
 
     const handleRemoveFromCart = async (productId) => {
         try {
+            // Đảm bảo gửi đúng productId trong URL
+            console.log('Removing product with ID:', productId);
             await apiClient.delete(`/cart/remove/${productId}`);
-            setCart(cart.filter(product => product._id !== productId));
+            
+            // Cập nhật state để loại bỏ sản phẩm đã xóa
+            setCart(cart.filter(item => item.productId !== productId));
             alert('Product removed from cart!');
         } catch (error) {
             console.error('Error removing from cart:', error);
-            alert('Failed to remove from cart');
+            alert('Failed to remove from cart: ' + (error.response?.data?.message || 'Unknown error'));
         }
     };
 
@@ -77,7 +81,7 @@ const CartPage = () => {
                                 <span>{product.price.toLocaleString()} đ</span>
                                 <button
                                     className="btn btn-danger btn-sm"
-                                    onClick={() => handleRemoveFromCart(product._id)}
+                                    onClick={() => handleRemoveFromCart(product.productId)}
                                 >
                                     Remove
                                 </button>

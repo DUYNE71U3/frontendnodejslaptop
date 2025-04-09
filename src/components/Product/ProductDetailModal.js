@@ -11,6 +11,7 @@ const ProductDetailModal = ({ product, onClose }) => {
     const [userReview, setUserReview] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
+    const [isInWishlist, setIsInWishlist] = useState(false);
     const isLoggedIn = !!localStorage.getItem('token');
     const navigate = useNavigate();
 
@@ -18,13 +19,14 @@ const ProductDetailModal = ({ product, onClose }) => {
         if (product) {
             fetchReviews();
             fetchProductRating();
+            checkIfInWishlist();
         }
     }, [product]);
 
     const fetchReviews = async () => {
         try {
             const response = await apiClient.get(`/reviews/product/${product._id}`);
-            setReviews(response.data);
+            setReviews(response.data); // Set the reviews dynamically
             
             // Check if the user has already reviewed this product
             if (isLoggedIn) {
@@ -52,6 +54,18 @@ const ProductDetailModal = ({ product, onClose }) => {
         }
     };
 
+    const checkIfInWishlist = async () => {
+        if (!isLoggedIn) return;
+        
+        try {
+            const response = await apiClient.get('/wishlist');
+            const isProductInWishlist = response.data.some(item => item.productId === product._id);
+            setIsInWishlist(isProductInWishlist);
+        } catch (error) {
+            console.error('Error checking wishlist:', error);
+        }
+    };
+
     const handleAddToCart = async () => {
         try {
             await apiClient.post('/cart/add', { productId: product._id });
@@ -60,6 +74,27 @@ const ProductDetailModal = ({ product, onClose }) => {
         } catch (error) {
             console.error('Error adding to cart:', error);
             alert('Failed to add to cart');
+        }
+    };
+
+    const handleAddToWishlist = async () => {
+        if (!isLoggedIn) {
+            alert('Please login to add items to your wishlist.');
+            navigate('/login');
+            return;
+        }
+        
+        try {
+            await apiClient.post('/wishlist/add', { productId: product._id });
+            alert('Product added to wishlist!');
+            setIsInWishlist(true);
+        } catch (error) {
+            if (error.response && error.response.status === 400 && error.response.data.message === 'Product already in wishlist') {
+                alert('This product is already in your wishlist.');
+            } else {
+                console.error('Error adding to wishlist:', error);
+                alert('Failed to add to wishlist');
+            }
         }
     };
 
@@ -182,20 +217,8 @@ const ProductDetailModal = ({ product, onClose }) => {
                                 <div className="col-md-6">
                                     <p><strong>Brand:</strong> {product.brand}</p>
                                     <p><strong>Price:</strong> {product.price.toLocaleString()} đ</p>
-                                    <p><strong>Category:</strong> {product.category ? product.category.name : 'N/A'}</p>
-                                    <p><strong>CPU:</strong> {product.cpu}</p>
-                                    <p><strong>RAM:</strong> {product.ram}</p>
-                                    <p><strong>Storage:</strong> {product.storage}</p>
-                                    <p><strong>GPU:</strong> {product.gpu || 'N/A'}</p>
-                                    <p><strong>Screen:</strong> {product.screen}</p>
-                                    <p><strong>Ports:</strong> {product.ports || 'N/A'}</p>
-                                    <p><strong>OS:</strong> {product.os}</p>
-                                    <p><strong>Weight:</strong> {product.weight || 'N/A'}</p>
-                                    <p><strong>Dimensions:</strong> {product.dimensions || 'N/A'}</p>
-                                    <p><strong>Battery:</strong> {product.battery || 'N/A'}</p>
-                                    <p><strong>Warranty:</strong> {product.warranty || 'N/A'}</p>
                                     
-                                    <div className="product-rating mt-3">
+                                    <div className="product-rating mt-3 mb-3">
                                         <div className="d-flex align-items-center">
                                             <div className="stars">
                                                 {renderStars(Math.round(averageRating))}
@@ -207,8 +230,64 @@ const ProductDetailModal = ({ product, onClose }) => {
                                     </div>
                                     
                                     {product.isNew && (
-                                        <span className="badge bg-success mt-2">New</span>
+                                        <span className="badge bg-success mt-2 mb-3">New</span>
                                     )}
+                                    
+                                    <h5>Technical Specifications</h5>
+                                    <div className="table-responsive">
+                                        <table className="table table-striped table-bordered">
+                                            <tbody>
+                                                <tr>
+                                                    <th>Category</th>
+                                                    <td>{product.category ? product.category.name : 'N/A'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Processor</th>
+                                                    <td>{product.cpu}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>RAM</th>
+                                                    <td>{product.ram}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Storage</th>
+                                                    <td>{product.storage}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Graphics</th>
+                                                    <td>{product.gpu || 'N/A'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Display</th>
+                                                    <td>{product.screen}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Operating System</th>
+                                                    <td>{product.os}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Ports</th>
+                                                    <td>{product.ports || 'N/A'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Weight</th>
+                                                    <td>{product.weight || 'N/A'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Dimensions</th>
+                                                    <td>{product.dimensions || 'N/A'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Battery</th>
+                                                    <td>{product.battery || 'N/A'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Warranty</th>
+                                                    <td>{product.warranty || 'N/A'}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -303,10 +382,18 @@ const ProductDetailModal = ({ product, onClose }) => {
                         </div>
                     </div>
                     <div className="modal-footer">
-                        <button type="button" className="btn btn-success" onClick={handleAddToCart}>
+                        <button type="button" className="btn btn-success me-2" onClick={handleAddToCart}>
                             Add to Cart
                         </button>
-                        <button type="button" className="btn btn-secondary" onClick={onClose}>
+                        <button 
+                            type="button" 
+                            className={`btn ${isInWishlist ? 'btn-secondary' : 'btn-outline-danger'}`} 
+                            onClick={handleAddToWishlist}
+                            disabled={isInWishlist}
+                        >
+                            {isInWishlist ? 'In Wishlist' : 'Add to Wishlist ♥'}
+                        </button>
+                        <button type="button" className="btn btn-secondary ms-2" onClick={onClose}>
                             Close
                         </button>
                     </div>
