@@ -23,12 +23,17 @@ const AdminDashboard = () => {
         password: '',
         phoneNumber: ''
     });
+    const [coupons, setCoupons] = useState([]);
+    const [newCoupon, setNewCoupon] = useState({ code: '', discount: '', expirationDate: '' });
+    const [editingCoupon, setEditingCoupon] = useState(null);
 
     useEffect(() => {
         if (activeTab === 'delivery') {
             fetchDeliveryPersons();
         } else if (activeTab === 'customer_service') {
             fetchCustomerServiceStaff();
+        } else if (activeTab === 'coupon') {
+            fetchCoupons();
         }
     }, [activeTab]);
 
@@ -47,6 +52,20 @@ const AdminDashboard = () => {
             setCustomerServiceStaff(response.data);
         } catch (error) {
             console.error('Error fetching customer service staff:', error);
+        }
+    };
+
+    const fetchCoupons = async () => {
+        try {
+            // Sửa đường dẫn API
+            const response = await apiClient.get('/coupons');
+            console.log('Fetched coupons:', response.data);
+            setCoupons(response.data);
+        } catch (error) {
+            console.error('Error fetching coupons:', error);
+            if (error.response) {
+                console.error('Error response:', error.response.data);
+            }
         }
     };
 
@@ -99,6 +118,83 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleCreateCoupon = async (e) => {
+        e.preventDefault();
+        try {
+            // Đảm bảo định dạng dữ liệu phù hợp
+            const formattedDate = new Date(newCoupon.expirationDate).toISOString();
+            
+            const couponData = {
+                code: newCoupon.code,
+                discount: Number(newCoupon.discount),
+                expirationDate: formattedDate
+            };
+            
+            console.log('Sending coupon data:', couponData);
+            
+            // Chỉ sử dụng đường dẫn API chính xác (không có /api prefix vì apiClient đã cấu hình baseURL)
+            const response = await apiClient.post('/coupons', couponData);
+            console.log('Coupon created:', response.data);
+            alert('Coupon created successfully');
+            setNewCoupon({ code: '', discount: '', expirationDate: '' });
+            fetchCoupons();
+        } catch (error) {
+            console.error('Error creating coupon:', error);
+            // Hiển thị thông báo lỗi chi tiết hơn
+            if (error.response) {
+                console.error('Error response:', error.response.data);
+                alert(`Failed to create coupon: ${error.response.data.message || 'Unknown error'}`);
+            } else if (error.request) {
+                console.error('Error request:', error.request);
+                alert('Failed to create coupon: No response received from server');
+            } else {
+                alert(`Failed to create coupon: ${error.message}`);
+            }
+        }
+    };
+
+    const handleEditCoupon = (coupon) => {
+        setEditingCoupon(coupon);
+        setNewCoupon({ code: coupon.code, discount: coupon.discount, expirationDate: coupon.expirationDate });
+    };
+
+    const handleUpdateCoupon = async (e) => {
+        e.preventDefault();
+        try {
+            await apiClient.put(`/api/coupons/${editingCoupon._id}`, newCoupon);
+            alert('Coupon updated successfully');
+            setEditingCoupon(null);
+            setNewCoupon({ code: '', discount: '', expirationDate: '' });
+            fetchCoupons();
+        } catch (error) {
+            console.error('Error updating coupon:', error);
+            alert('Failed to update coupon');
+        }
+    };
+
+    const handleDeleteCoupon = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this coupon?')) return;
+        try {
+            await apiClient.delete(`/api/coupons/${id}`);
+            alert('Coupon deleted successfully');
+            fetchCoupons();
+        } catch (error) {
+            console.error('Error deleting coupon:', error);
+            alert('Failed to delete coupon');
+        }
+    };
+
+    const handleUpdateStatus = async (id, status) => {
+        try {
+            await apiClient.patch(`/api/coupons/${id}/status`, { status });
+            alert('Coupon status updated successfully');
+            fetchCoupons();
+        } catch (error) {
+            console.error('Error updating coupon status:', error);
+            alert('Failed to update coupon status');
+        }
+    };
+
     return (
         <div className="container my-5">
             <h2 className="text-center mb-4">Admin Dashboard</h2>
@@ -123,10 +219,16 @@ const AdminDashboard = () => {
                     Delivery
                 </button>
                 <button
-                    className={`btn ${activeTab === 'customer_service' ? 'btn-primary' : 'btn-outline-primary'}`}
+                    className={`btn ${activeTab === 'customer_service' ? 'btn-primary' : 'btn-outline-primary'} me-2`}
                     onClick={() => setActiveTab('customer_service')}
                 >
                     Customer Service
+                </button>
+                <button
+                    className={`btn ${activeTab === 'coupon' ? 'btn-primary' : 'btn-outline-primary'}`}
+                    onClick={() => setActiveTab('coupon')}
+                >
+                    Coupons
                 </button>
             </div>
 
@@ -333,6 +435,104 @@ const AdminDashboard = () => {
                                         <td>{staff.email}</td>
                                         <td>{staff.phoneNumber || 'N/A'}</td>
                                         <td>{new Date(staff.createdAt).toLocaleDateString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {activeTab === 'coupon' && (
+                    <div>
+                        <h3>Manage Coupons</h3>
+                        <form onSubmit={editingCoupon ? handleUpdateCoupon : handleCreateCoupon} className="mb-4">
+                            <div className="row">
+                                <div className="col-md-4">
+                                    <label className="form-label">Code</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        value={newCoupon.code}
+                                        onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="col-md-4">
+                                    <label className="form-label">Discount (%)</label>
+                                    <input
+                                        type="number"
+                                        className="form-control"
+                                        value={newCoupon.discount}
+                                        onChange={(e) => setNewCoupon({ ...newCoupon, discount: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="col-md-4">
+                                    <label className="form-label">Expiration Date</label>
+                                    <input
+                                        type="date"
+                                        className="form-control"
+                                        value={newCoupon.expirationDate}
+                                        onChange={(e) => setNewCoupon({ ...newCoupon, expirationDate: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <button type="submit" className="btn btn-success mt-3">
+                                {editingCoupon ? 'Update Coupon' : 'Create Coupon'}
+                            </button>
+                        </form>
+
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Discount</th>
+                                    <th>Expiration Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {coupons.map((coupon) => (
+                                    <tr key={coupon._id}>
+                                        <td>{coupon.code}</td>
+                                        <td>{coupon.discount}%</td>
+                                        <td>{new Date(coupon.expirationDate).toLocaleDateString()}</td>
+                                        <td>
+                                            <span
+                                                className={`badge ${
+                                                    coupon.status === 'active' ? 'bg-success' : 'bg-danger'
+                                                }`}
+                                            >
+                                                {coupon.status}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button
+                                                className="btn btn-warning btn-sm me-2"
+                                                onClick={() => handleEditCoupon(coupon)}
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                className="btn btn-danger btn-sm me-2"
+                                                onClick={() => handleDeleteCoupon(coupon._id)}
+                                            >
+                                                Delete
+                                            </button>
+                                            <button
+                                                className="btn btn-secondary btn-sm"
+                                                onClick={() =>
+                                                    handleUpdateStatus(
+                                                        coupon._id,
+                                                        coupon.status === 'active' ? 'expired' : 'active'
+                                                    )
+                                                }
+                                            >
+                                                {coupon.status === 'active' ? 'Set Expired' : 'Set Active'}
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

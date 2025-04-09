@@ -1,23 +1,35 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-    baseURL: 'http://localhost:5000/api', // URL của backend
+    baseURL: 'http://localhost:5000/api',
     headers: {
-        'Content-Type': 'application/json',
-    },
-});
-
-// Thêm token vào header nếu có
-apiClient.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+        'Content-Type': 'application/json'
     }
-    return config;
 });
 
-// If you need to add specific methods for wishlist operations,
-// you can add them here if you're extending the apiClient.
-// If you're using Axios instance directly, no changes are needed.
+// Interceptor để thêm token vào headers
+apiClient.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Interceptor để xử lý lỗi phản hồi
+apiClient.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    (error) => {
+        console.error('API Error:', error);
+        return Promise.reject(error);
+    }
+);
 
 export default apiClient;
